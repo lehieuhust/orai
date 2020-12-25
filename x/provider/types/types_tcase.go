@@ -16,7 +16,7 @@ var _ exported.TestCaseI = (*TestCase)(nil)
 type TestCase struct {
 	Owner       sdk.AccAddress `json:"owner"`
 	Name        string         `json:"name"`
-	Fees        sdk.Coins      `json:"transaction_fee"`
+	Fees        sdk.Coins      `json:"fees"`
 	Description string         `json:"description"`
 }
 

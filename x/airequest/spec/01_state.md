@@ -17,7 +17,7 @@ type AIRequest struct {
 	BlockHeight      int64                    `json:"block_height"` // request block height
 	AIDataSources    []provider.AIDataSourceI `json:"data_sources"` // List of AI Data Sources that are in the Oracle Script
 	TestCases        []provider.TestCaseI     `json:"testcases"` // List of Test Cases that are in the Oracle Script
-	Fees             sdk.Coins                `json:"transaction_fee"` // The transaction fee required to run this AI Request. Eg: 5000orai
+	Fees             sdk.Coins                `json:"request_fees"` // The transaction fee required to run this AI Request. Eg: 5000orai
 	Input            []byte                   `json:"request_input"` // User's input for the AI Request
 	ExpectedOutput   []byte                   `json:"expected_output"` // User's expected output for the AI Request
 }

@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -164,9 +163,9 @@ func GetCmdEditOracleScript(cdc *codec.Codec) *cobra.Command {
 // GetCmdCreateAIDataSource is the CLI command for sending a SetAIDataSource transaction
 func GetCmdCreateAIDataSource(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "set-datasource [name] [code-path] [description]",
+		Use:   "set-datasource [name] [code-path] [description] [fees]",
 		Short: "Set a new data source into the system",
-		Args:  cobra.ExactArgs(3),
+		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -178,10 +177,7 @@ func GetCmdCreateAIDataSource(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			// collect transaction fee from the user
-			fees := viper.GetString(flags.FlagFees)
-
-			msg := types.NewMsgCreateAIDataSource(args[0], execBytes, cliCtx.GetFromAddress(), fees, args[2])
+			msg := types.NewMsgCreateAIDataSource(args[0], execBytes, cliCtx.GetFromAddress(), args[3], args[2])
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -195,9 +191,9 @@ func GetCmdCreateAIDataSource(cdc *codec.Codec) *cobra.Command {
 // GetCmdEditAIDataSource is the CLI command for sending a MsgEditDataSource transaction
 func GetCmdEditAIDataSource(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "edit-datasource [old-name] [new-name] [code-path] [description]",
+		Use:   "edit-datasource [old-name] [new-name] [code-path] [description] [fees]",
 		Short: "Edit an existing data source in the system",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -209,10 +205,7 @@ func GetCmdEditAIDataSource(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			// collect transaction fee from the user
-			fees := viper.GetString(flags.FlagFees)
-
-			msg := types.NewMsgEditAIDataSource(args[0], args[1], execBytes, cliCtx.FromAddress, fees, args[3])
+			msg := types.NewMsgEditAIDataSource(args[0], args[1], execBytes, cliCtx.FromAddress, args[4], args[3])
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -261,9 +254,9 @@ func GetCmdEditAIDataSource(cdc *codec.Codec) *cobra.Command {
 // GetCmdCreateTestCase is the CLI command for sending a SetTestCase transaction
 func GetCmdCreateTestCase(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "set-testcase [name] [code-path] [description]",
+		Use:   "set-testcase [name] [code-path] [description] [fees]",
 		Short: "Set a new ai request test case into the store",
-		Args:  cobra.ExactArgs(3),
+		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -275,10 +268,7 @@ func GetCmdCreateTestCase(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			// collect transaction fee from the user
-			fees := viper.GetString(flags.FlagFees)
-
-			msg := types.NewMsgCreateTestCase(args[0], execBytes, cliCtx.GetFromAddress(), fees, args[2])
+			msg := types.NewMsgCreateTestCase(args[0], execBytes, cliCtx.GetFromAddress(), args[3], args[2])
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -292,9 +282,9 @@ func GetCmdCreateTestCase(cdc *codec.Codec) *cobra.Command {
 // GetCmdEditTestCase is the CLI command for sending a MsgEditTestCase transaction
 func GetCmdEditTestCase(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "edit-testcase [old-name] [new-name] [code-path] [description]",
+		Use:   "edit-testcase [old-name] [new-name] [code-path] [description] [fees]",
 		Short: "Edit an existing data source in the system",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -306,10 +296,7 @@ func GetCmdEditTestCase(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			// collect transaction fee from the user
-			fees := viper.GetString(flags.FlagFees)
-
-			msg := types.NewMsgEditTestCase(args[0], args[1], execBytes, cliCtx.FromAddress, fees, args[3])
+			msg := types.NewMsgEditTestCase(args[0], args[1], execBytes, cliCtx.FromAddress, args[4], args[3])
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err

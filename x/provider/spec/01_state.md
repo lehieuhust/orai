@@ -29,7 +29,7 @@ AI Data Source is a basic element in the Oraichain network. It describes a way t
 type AIDataSource struct {
 	Name        string         `json:"name"`
 	Owner       sdk.AccAddress `json:"owner"`
-	Fees        sdk.Coins      `json:"transaction_fee"`
+	Fees        sdk.Coins      `json:"fees"`
 	Description string         `json:"description"`
 }
 ```
@@ -41,7 +41,7 @@ AI test case is one of the most fundamental elements in the Oraichain system. It
 type TestCase struct {
 	Owner       sdk.AccAddress `json:"owner"`
 	Name        string         `json:"name"`
-	Fees        sdk.Coins      `json:"transaction_fee"`
+	Fees        sdk.Coins      `json:"fees"`
 	Description string         `json:"description"`
 }
 ```

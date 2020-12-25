@@ -44,7 +44,7 @@ type createDataSourceReq struct {
 	BaseReq     rest.BaseReq `json:"base_req"`
 	Name        string       `json:"name"`
 	CodePath    string       `json:"code_path"`
-	Fees        string       `json:"fees"`
+	Fees        string       `json:"provider_fees"`
 	Description string       `json:"description"`
 }
 
@@ -53,7 +53,7 @@ type editDataSourceReq struct {
 	OldName     string       `json:"old_name"`
 	NewName     string       `json:"new_name"`
 	CodePath    string       `json:"code_path"`
-	Fees        string       `json:"fees"`
+	Fees        string       `json:"provider_fees"`
 	Description string       `json:"description"`
 }
 
@@ -61,7 +61,7 @@ type createTestCaseReq struct {
 	BaseReq     rest.BaseReq `json:"base_req"`
 	Name        string       `json:"name"`
 	CodePath    string       `json:"code_path"`
-	Fees        string       `json:"fees"`
+	Fees        string       `json:"provider_fees"`
 	Description string       `json:"description"`
 }
 
@@ -70,7 +70,7 @@ type editTestCaseReq struct {
 	OldName     string       `json:"old_name"`
 	NewName     string       `json:"new_name"`
 	CodePath    string       `json:"code_path"`
-	Fees        string       `json:"fees"`
+	Fees        string       `json:"provider_fees"`
 	Description string       `json:"description"`
 }
 

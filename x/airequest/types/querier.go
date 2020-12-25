@@ -27,7 +27,7 @@ type QueryResAIRequest struct {
 	BlockHeight      int64                    `json:"block_height"`
 	AIDataSources    []provider.AIDataSourceI `json:"data_sources"`
 	TestCases        []provider.TestCaseI     `json:"test_cases"`
-	Fees             string                   `json:"transaction_fee"`
+	Fees             string                   `json:"request_fees"`
 }
 
 // NewQueryResAIRequest is the constructor for the query ai request

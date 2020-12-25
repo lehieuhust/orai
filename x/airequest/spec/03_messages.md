@@ -18,7 +18,7 @@ type MsgSetAIRequest struct {
 	OracleScriptName string         		 `json:"oscript_name"`
 	Creator          sdk.AccAddress 		 `json:"creator"`
 	ValidatorCount   int            		 `json:"validator_count"`
-	Fees             string         		 `json:"transaction_fee"`
+	Fees             string         		 `json:"request_fees"`
 	Input            json.RawMessage         `json:"request_input"`
 	ExpectedOutput   json.RawMessage         `json:"expected_output"`
 }

@@ -197,15 +197,15 @@ initDevFn(){
 
 
 initScriptFn(){
-  echo "y" | oraicli tx provider set-datasource coingecko_eth ./testfiles/coingecko_eth.py "A data source that fetches the ETH price from Coingecko API" --from $USER --fees 5000orai
+  echo "y" | oraicli tx provider set-datasource coingecko_eth ./testfiles/coingecko_eth.py "A data source that fetches the ETH price from Coingecko API" "4000orai" --from $USER --fees 5000orai
 
   sleep 5
 
-  echo "y" | oraicli tx provider set-datasource crypto_compare_eth ./testfiles/crypto_compare_eth.py "A data source that collects ETH price from crypto compare" --from $USER --fees 5000orai
+  echo "y" | oraicli tx provider set-datasource crypto_compare_eth ./testfiles/crypto_compare_eth.py "A data source that collects ETH price from crypto compare" "5000orai" --from $USER --fees 5000orai
 
   sleep 5
 
-  echo "y" | oraicli tx provider set-testcase testcase_price ./testfiles/testcase_price.py "A sample test case that uses the expected output of users provided to verify the bitcoin price from the datasource" --from $USER --fees 5000orai
+  echo "y" | oraicli tx provider set-testcase testcase_price ./testfiles/testcase_price.py "A sample test case that uses the expected output of users provided to verify the bitcoin price from the datasource" "5000orai" --from $USER --fees 5000orai
 
   sleep 5
 

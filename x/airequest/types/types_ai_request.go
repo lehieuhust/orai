@@ -23,7 +23,7 @@ type AIRequest struct {
 	BlockHeight      int64                    `json:"block_height"`
 	AIDataSources    []provider.AIDataSourceI `json:"data_sources"`
 	TestCases        []provider.TestCaseI     `json:"testcases"`
-	Fees             sdk.Coins                `json:"transaction_fee"`
+	Fees             sdk.Coins                `json:"request_fees"`
 	Input            []byte                   `json:"request_input"`
 	ExpectedOutput   []byte                   `json:"expected_output"`
 	//Time         string `json:"time"`

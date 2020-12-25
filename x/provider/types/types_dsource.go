@@ -17,7 +17,7 @@ var _ exported.AIDataSourceI = (*AIDataSource)(nil)
 type AIDataSource struct {
 	Name        string         `json:"name"`
 	Owner       sdk.AccAddress `json:"owner"`
-	Fees        sdk.Coins      `json:"transaction_fee"`
+	Fees        sdk.Coins      `json:"fees"`
 	Description string         `json:"description"`
 }
 

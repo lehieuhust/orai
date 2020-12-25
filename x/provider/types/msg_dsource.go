@@ -16,7 +16,7 @@ type MsgCreateAIDataSource struct {
 	Description string         `json:"description"`
 	Code        []byte         `json:"code"`
 	Owner       sdk.AccAddress `json:"owner"`
-	Fees        string         `json:"transaction_fee"`
+	Fees        string         `json:"fees"`
 }
 
 // NewMsgCreateAIDataSource is a constructor function for MsgCreateAIDataSource

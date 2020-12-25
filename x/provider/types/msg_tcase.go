@@ -15,7 +15,7 @@ type MsgCreateTestCase struct {
 	Name        string         `json:"test_case_name"`
 	Owner       sdk.AccAddress `json:"owner"`
 	Code        []byte         `json:"code"`
-	Fees        string         `json:"transaction_fee"`
+	Fees        string         `json:"fees"`
 	Description string         `json:"description"`
 }
 

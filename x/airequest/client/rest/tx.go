@@ -35,7 +35,7 @@ type setAIRequestReq struct {
 	OracleScriptName string          `json:"oracle_script_name"`
 	Input            json.RawMessage `json:"input"`
 	ExpectedOutput   json.RawMessage `json:"expected_output"`
-	Fees             string          `json:"fees"`
+	Fees             string          `json:"request_fees"`
 	ValidatorCount   int             `json:"validator_count"`
 }
 
@@ -63,9 +63,6 @@ func setAIRequestHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		// Collect fees in Coins type. Bug: cannot set fee through json using REST API => This is the workaround
-		fees, _ := sdk.ParseCoins(req.Fees)
-		baseReq.Fees = fees
 		if !baseReq.ValidateBasic(w) {
 			return
 		}
