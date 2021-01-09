@@ -7,17 +7,17 @@ tmp_dir = "tmp"
 
 [build]
 # Just plain old shell command. You could use `make` as well.
-cmd = "make build"
+cmd = "make build-orai"
 # Binary file yields from `cmd`.
-bin = "tmp/oraid"
+bin = "tmp/orai"
 # Customize binary.
-full_bin = "./tmp/oraid start"
+full_bin = "./tmp/orai start --chain-id $CHAIN_ID --laddr tcp://0.0.0.0:1317 --node tcp://0.0.0.0:26657 # --trust-node"
 # This log file places in your tmp_dir.
 log = "air_errors.log"
 # Watch these filename extensions.
 include_ext = ["go", "tpl", "tmpl", "html", "env"]
 # Ignore these filename extensions or directories.
-exclude_dir = ["assets", "tmp", "vendor", "node_modules", "cosmosjs"]
+exclude_dir = ["assets", "tmp", "vendor", "node_modules", "cosmosjs", "registry_cache", "cosmwasm-examples"]
 # There's no necessary to trigger build each time file changes if it's too frequency.
 delay = 1000 # ms
 

@@ -21,7 +21,8 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	r.HandleFunc(
 		fmt.Sprintf("/%s/aireqs", storeName),
 		queryAIRequestIDsHandlerFn(cliCtx),
-	).Methods("GET")
+	).Methods("GET")	
+
 }
 
 func queryAIRequestHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {

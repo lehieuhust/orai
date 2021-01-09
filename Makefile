@@ -17,10 +17,10 @@ all: install
 
 install: go.sum
 		@echo "--> Installing oraid & oraicli"
-		install-orai
-		install-oraicli
-		install-oraid
-		install-websocket
+		make install-orai
+		make install-oraicli
+		make install-oraid
+		make install-websocket
 
 
 install-orai:
@@ -34,6 +34,9 @@ install-oraid:
 
 install-websocket:
 		go install -mod=readonly $(BUILD_FLAGS) ./cmd/websocket						
+
+watch-orai:
+		air -c orai.toml
 
 watch-oraid:
 		air -c oraid.toml
