@@ -52,22 +52,22 @@ var (
 	// non-dependant module elements, such as codec registration
 	// and genesis verification.
 	ModuleBasics = module.NewBasicManager(
-		genutil.AppModuleBasic{},
-		auth.AppModuleBasic{},
-		bank.AppModuleBasic{},
-		supply.AppModuleBasic{},
-		staking.AppModuleBasic{},
-		mint.AppModuleBasic{},
-		distr.AppModuleBasic{},
+		genutil.AppModuleBasic{}, // genesis utility functions
+		auth.AppModuleBasic{},    // specifying the base transactions and account types for an application
+		bank.AppModuleBasic{},    // handling multi-asset coin transfers between accounts
+		supply.AppModuleBasic{},  // track the total supply of coins within a chain
+		staking.AppModuleBasic{}, // support advanced POS system, holders of native staking token of the chain can become validators
+		mint.AppModuleBasic{},    // allow for flexible inflation rate determined by market demand targeting a particular bonded-stake ratio
+		distr.AppModuleBasic{},   // passively distribute rewards between validators and delegators
 		//gov.NewAppModuleBasic(paramsclient.ProposalHandler, distr.ProposalHandler, upgradeclient.ProposalHandler),
-		params.AppModuleBasic{},
+		params.AppModuleBasic{}, // provides a globally available parameter store
 		//crisis.AppModuleBasic{},
-		slashing.AppModuleBasic{},
+		slashing.AppModuleBasic{}, // enables blockchain to disincentivize any attributable action by a protocol-recognized actor with value at stake by penalizing them
 		//evidence.AppModuleBasic{},
-		provider.AppModuleBasic{},
-		aiRequest.AppModuleBasic{},
-		webSocket.AppModuleBasic{},
-		aiResult.AppModuleBasic{},
+		provider.AppModuleBasic{},  // provider ...
+		aiRequest.AppModuleBasic{}, // ai request
+		webSocket.AppModuleBasic{}, // listen and run smart contract
+		aiResult.AppModuleBasic{},  // ai result
 		// TODO: Add your module(s) AppModuleBasic
 	)
 
