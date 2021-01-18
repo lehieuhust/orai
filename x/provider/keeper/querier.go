@@ -85,7 +85,7 @@ func queryOracleScripts(ctx sdk.Context, keeper Keeper, req abci.RequestQuery) (
 
 	// guard code
 	if len(pagiSlice) < 3 {
-		return ]byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
+		return []byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
 	}
 
 	page, err := strconv.Atoi(pagiSlice[0])
@@ -167,7 +167,7 @@ func queryDataSources(ctx sdk.Context, keeper Keeper, req abci.RequestQuery) ([]
 	pagiSlice := strings.Split(string(req.GetData()[:]), "-")
 	// guard code
 	if len(pagiSlice) < 3 {
-		return ]byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
+		return []byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
 	}
 
 	page, err := strconv.Atoi(pagiSlice[0])
@@ -287,7 +287,7 @@ func queryTestCases(ctx sdk.Context, keeper Keeper, req abci.RequestQuery) ([]by
 	
 	// guard code
 	if len(pagiSlice) < 3 {
-		return ]byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
+		return []byte{}, sdkerrors.Wrap(types.ErrPaginationInputInvalid, "Param is invalid")
 	}
 
 	page, err := strconv.Atoi(pagiSlice[0])
