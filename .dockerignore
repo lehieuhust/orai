@@ -1,0 +1,8 @@
+**/node_modules
+registry_cache
+build
+.oraicli
+.oraid
+.cache 
+.devcontainer
+.vscode
