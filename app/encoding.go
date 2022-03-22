@@ -6,6 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	ibcclienttypes "github.com/cosmos/cosmos-sdk/x/ibc/core/02-client/types"
 )
 
 // EncodingConfig specifies the concrete encoding types to use for a given app.
@@ -28,6 +30,12 @@ func MakeEncodingConfig() EncodingConfig {
 
 	ModuleBasics.RegisterLegacyAminoCodec(amino)
 	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+
+	interfaceRegistry.RegisterImplementations(
+		(*govtypes.Content)(nil),
+		&ibcclienttypes.ClientUpdateProposal{},
+	)
+
 	return EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Marshaler:         marshaler,
