@@ -39,7 +39,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
@@ -112,6 +111,12 @@ import (
 	intertxkeeper "github.com/cosmos/interchain-accounts/x/inter-tx/keeper"
 	intertxtypes "github.com/cosmos/interchain-accounts/x/inter-tx/types"
 
+	ibctesting "github.com/cosmos/interchain-security/legacy_ibc_testing/testing"
+	ibcprovider "github.com/cosmos/interchain-security/x/ccv/provider"
+	ibcproviderclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
+	ibcproviderkeeper "github.com/cosmos/interchain-security/x/ccv/provider/keeper"
+	providertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/oraichain/orai/doc/statik"
 
@@ -134,7 +139,7 @@ const appName = "Oraichain"
 var (
 	NodeDir = ".oraid"
 
-	BinaryVersion = "v0.41.2"
+	BinaryVersion = "v0.41.3"
 
 	// If EnabledSpecificProposals is "", and this is "true", then enable all x/wasm proposals.
 	// If EnabledSpecificProposals is "", and this is not "true", then disable all x/wasm proposals.
@@ -204,6 +209,9 @@ var (
 				upgradeclient.CancelProposalHandler,
 				ibcclientclient.UpdateClientProposalHandler,
 				ibcclientclient.UpgradeProposalHandler,
+				ibcproviderclient.ConsumerAdditionProposalHandler,
+				ibcproviderclient.ConsumerRemovalProposalHandler,
+				ibcproviderclient.EquivocationProposalHandler,
 			)...,
 		),
 		params.AppModuleBasic{},
@@ -220,6 +228,7 @@ var (
 		ica.AppModuleBasic{},
 		intertx.AppModuleBasic{},
 		ibcfee.AppModuleBasic{},
+		ibcprovider.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -246,6 +255,7 @@ var (
 var (
 	_ simapp.App              = (*OraichainApp)(nil)
 	_ servertypes.Application = (*OraichainApp)(nil)
+	_ ibctesting.TestingApp   = (*OraichainApp)(nil)
 )
 
 // OraichainApp extended ABCI application
@@ -286,7 +296,11 @@ type OraichainApp struct {
 	icaHostKeeper       icahostkeeper.Keeper
 	interTxKeeper       intertxkeeper.Keeper
 
+	// ICS
+	ProviderKeeper ibcproviderkeeper.Keeper
+
 	// custom modules here
+	ProviderModule ibcprovider.AppModule
 
 	// make scoped keepers public for test purposes
 	scopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -296,6 +310,7 @@ type OraichainApp struct {
 	scopedICAHostKeeper       capabilitykeeper.ScopedKeeper
 	scopedICAControllerKeeper capabilitykeeper.ScopedKeeper
 	scopedInterTxKeeper       capabilitykeeper.ScopedKeeper
+	scopedIBCProviderKeeper   capabilitykeeper.ScopedKeeper
 
 	// the module manager
 	mm *module.Manager
@@ -326,7 +341,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey,
 		wasm.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey, icahosttypes.StoreKey,
-		icacontrollertypes.StoreKey, intertxtypes.StoreKey, ibcfeetypes.StoreKey,
+		icacontrollertypes.StoreKey, intertxtypes.StoreKey, ibcfeetypes.StoreKey, providertypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -355,6 +370,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 	scopedICAHostKeeper := app.capabilityKeeper.ScopeToModule(icahosttypes.SubModuleName)
 	scopedICAControllerKeeper := app.capabilityKeeper.ScopeToModule(icacontrollertypes.SubModuleName)
 	scopedInterTxKeeper := app.capabilityKeeper.ScopeToModule(intertxtypes.ModuleName)
+	scopedIBCProviderKeeper := app.capabilityKeeper.ScopeToModule(providertypes.ModuleName)
 	app.capabilityKeeper.Seal()
 
 	// add keepers
@@ -409,7 +425,11 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	app.stakingKeeper = *stakingKeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(app.distrKeeper.Hooks(), app.slashingKeeper.Hooks()),
+		stakingtypes.NewMultiStakingHooks(
+			app.distrKeeper.Hooks(),
+			app.slashingKeeper.Hooks(),
+			app.ProviderKeeper.Hooks(),
+		),
 	)
 
 	// Create IBC Keeper
@@ -421,14 +441,6 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		app.upgradeKeeper,
 		scopedIBCKeeper,
 	)
-
-	// register the proposal types
-	govRouter := govtypes.NewRouter()
-	govRouter.AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
-		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.paramsKeeper)).
-		AddRoute(distrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.distrKeeper)).
-		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.upgradeKeeper)).
-		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.ibcKeeper.ClientKeeper))
 
 	// IBC Fee Module keeper
 	app.ibcFeeKeeper = ibcfeekeeper.NewKeeper(
@@ -445,11 +457,32 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		app.accountKeeper, app.bankKeeper, scopedTransferKeeper,
 	)
 
-	// create evidence keeper with router
+	// EvidenceKeeper must be created before ProviderKeeper
 	evidenceKeeper := evidencekeeper.NewKeeper(
-		appCodec, keys[evidencetypes.StoreKey], &app.stakingKeeper, app.slashingKeeper,
+		appCodec,
+		keys[evidencetypes.StoreKey],
+		&app.stakingKeeper,
+		app.slashingKeeper,
 	)
 	app.evidenceKeeper = *evidenceKeeper
+
+	app.ProviderKeeper = ibcproviderkeeper.NewKeeper(
+		appCodec,
+		app.keys[providertypes.StoreKey],
+		app.getSubspace(providertypes.ModuleName),
+		scopedIBCProviderKeeper,
+		app.ibcKeeper.ChannelKeeper,
+		&app.ibcKeeper.PortKeeper,
+		app.ibcKeeper.ConnectionKeeper,
+		app.ibcKeeper.ClientKeeper,
+		app.stakingKeeper,
+		app.slashingKeeper,
+		app.accountKeeper,
+		app.evidenceKeeper,
+		authtypes.FeeCollectorName,
+	)
+
+	app.ProviderModule = ibcprovider.NewAppModule(&app.ProviderKeeper)
 
 	app.icaHostKeeper = icahostkeeper.NewKeeper(
 		appCodec,
@@ -474,6 +507,15 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 
 	// For wasmd we use the demo controller from https://github.com/cosmos/interchain-accounts but see notes below
 	app.interTxKeeper = intertxkeeper.NewKeeper(appCodec, keys[intertxtypes.StoreKey], app.icaControllerKeeper, scopedInterTxKeeper)
+
+	// register the proposal types
+	govRouter := govtypes.NewRouter()
+	govRouter.AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.paramsKeeper)).
+		AddRoute(distrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.distrKeeper)).
+		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.upgradeKeeper)).
+		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.ibcKeeper.ClientKeeper)).
+		AddRoute(providertypes.RouterKey, ibcprovider.NewProviderProposalHandler(app.ProviderKeeper))
 
 	// just re-use the full router - do we want to limit this more?
 	wasmDir := filepath.Join(homePath, "wasm")
@@ -545,7 +587,8 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		AddRoute(wasm.ModuleName, wasmStack).
 		AddRoute(intertxtypes.ModuleName, icaControllerStack).
 		AddRoute(icacontrollertypes.SubModuleName, icaControllerStack).
-		AddRoute(icahosttypes.SubModuleName, icaHostStack)
+		AddRoute(icahosttypes.SubModuleName, icaHostStack).
+		AddRoute(providertypes.ModuleName, app.ProviderModule)
 
 	app.ibcKeeper.SetRouter(ibcRouter)
 
@@ -592,6 +635,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		ibcfee.NewAppModule(app.ibcFeeKeeper),
 		ica.NewAppModule(&app.icaControllerKeeper, &app.icaHostKeeper),
 		intertx.NewAppModule(appCodec, app.interTxKeeper),
+		app.ProviderModule,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -622,6 +666,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		ibcfeetypes.ModuleName,
 		intertxtypes.ModuleName,
 		wasm.ModuleName,
+		providertypes.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
@@ -647,6 +692,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		ibcfeetypes.ModuleName,
 		intertxtypes.ModuleName,
 		wasm.ModuleName,
+		providertypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -661,9 +707,9 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		distrtypes.ModuleName,
+		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
-		govtypes.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
@@ -681,6 +727,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		intertxtypes.ModuleName,
 		// wasm after ibc transfer
 		wasm.ModuleName,
+		providertypes.ModuleName,
 	)
 
 	app.mm.RegisterInvariants(&app.crisisKeeper)
@@ -711,6 +758,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 		evidence.NewAppModule(app.evidenceKeeper),
 		ibc.NewAppModule(app.ibcKeeper),
 		transfer.NewAppModule(app.transferKeeper),
+		app.ProviderModule,
 	)
 
 	app.sm.RegisterStoreDecoders()
@@ -776,6 +824,7 @@ func NewOraichainApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLat
 	app.scopedICAHostKeeper = scopedICAHostKeeper
 	app.scopedICAControllerKeeper = scopedICAControllerKeeper
 	app.scopedInterTxKeeper = scopedInterTxKeeper
+	app.scopedIBCProviderKeeper = scopedIBCProviderKeeper
 
 	return app
 }
@@ -831,6 +880,14 @@ func (app *OraichainApp) BlockedAddrs() map[string]bool {
 	return blockedAddrs
 }
 
+// AppCodec returns Orai's app codec.
+//
+// NOTE: This is solely to be used for testing purposes as it may be desirable
+// for modules to register their own custom testing types.
+func (app *OraichainApp) AppCodec() codec.Codec {
+	return app.appCodec
+}
+
 // LegacyAmino returns SimApp's amino codec.
 //
 // NOTE: This is solely to be used for testing purposes as it may be desirable
@@ -850,6 +907,18 @@ func (app *OraichainApp) SimulationManager() *module.SimulationManager {
 func (app *OraichainApp) getSubspace(moduleName string) paramstypes.Subspace {
 	subspace, _ := app.paramsKeeper.GetSubspace(moduleName)
 	return subspace
+}
+
+// TestingApp functions
+
+// GetBaseApp implements the TestingApp interface.
+func (app *OraichainApp) GetBaseApp() *baseapp.BaseApp {
+	return app.BaseApp
+}
+
+// GetTxConfig implements the TestingApp interface.
+func (app *OraichainApp) GetTxConfig() client.TxConfig {
+	return MakeEncodingConfig().TxConfig
 }
 
 // RegisterAPIRoutes registers all application module routes with the provided
@@ -909,6 +978,20 @@ func GetMaccPerms() map[string][]string {
 	return dupMaccPerms
 }
 
+// BlockedModuleAccountAddrs returns all the app's blocked module account
+// addresses.
+func (app *OraichainApp) BlockedModuleAccountAddrs(modAccAddrs map[string]bool) map[string]bool {
+	// remove module accounts that are ALLOWED to received funds
+	delete(modAccAddrs, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+
+	// Remove the fee-pool from the group of blocked recipient addresses in bank
+	// this is required for the provider chain to be able to receive tokens from
+	// the consumer chain
+	delete(modAccAddrs, authtypes.NewModuleAddress(authtypes.FeeCollectorName).String())
+
+	return modAccAddrs
+}
+
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey sdk.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
@@ -926,62 +1009,14 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(wasm.ModuleName)
+	paramsKeeper.Subspace(providertypes.ModuleName)
 
 	return paramsKeeper
 }
 
 func (app *OraichainApp) upgradeHandler() {
 	app.upgradeKeeper.SetUpgradeHandler(BinaryVersion, func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		// 1st-time running in-store migrations, using 1 as fromVersion to
-		// avoid running InitGenesis.
-		// app.ibcKeeper.ConnectionKeeper.SetParams(ctx, ibcconnectiontypes.DefaultParams())
-
-		icaModule, correctTypecast := app.mm.Modules[icatypes.ModuleName].(ica.AppModule)
-		if !correctTypecast {
-			panic("mm.Modules[icatypes.ModuleName] is not of type ica.AppModule")
-		}
-		fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
-		controllerParams := icacontrollertypes.Params{
-			ControllerEnabled: false,
-		}
-		// create ICS27 Host submodule params
-		hostParams := icahosttypes.Params{
-			HostEnabled: false,
-			AllowMessages: []string{
-				sdk.MsgTypeURL(&banktypes.MsgSend{}),
-				sdk.MsgTypeURL(&banktypes.MsgMultiSend{}),
-				sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
-				sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
-				sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
-				sdk.MsgTypeURL(&stakingtypes.MsgCreateValidator{}),
-				sdk.MsgTypeURL(&stakingtypes.MsgEditValidator{}),
-				sdk.MsgTypeURL(&distrtypes.MsgWithdrawDelegatorReward{}),
-				sdk.MsgTypeURL(&distrtypes.MsgSetWithdrawAddress{}),
-				sdk.MsgTypeURL(&distrtypes.MsgWithdrawValidatorCommission{}),
-				sdk.MsgTypeURL(&distrtypes.MsgFundCommunityPool{}),
-				sdk.MsgTypeURL(&govtypes.MsgVote{}),
-				sdk.MsgTypeURL(&govtypes.MsgVoteWeighted{}),
-				sdk.MsgTypeURL(&govtypes.MsgSubmitProposal{}),
-				sdk.MsgTypeURL(&govtypes.MsgDeposit{}),
-				sdk.MsgTypeURL(&authz.MsgExec{}),
-				sdk.MsgTypeURL(&authz.MsgGrant{}),
-				sdk.MsgTypeURL(&authz.MsgRevoke{}),
-				// wasm
-				sdk.MsgTypeURL(&wasmtypes.MsgStoreCode{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgInstantiateContract{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgInstantiateContract2{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgExecuteContract{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgMigrateContract{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgUpdateAdmin{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgClearAdmin{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgIBCSend{}),
-				sdk.MsgTypeURL(&wasmtypes.MsgIBCCloseChannel{}),
-			},
-		}
-
-		ctx.Logger().Info("start to init interchainaccount module...")
-		// initialize ICS27 module
-		icaModule.InitModule(ctx, controllerParams, hostParams)
+		ctx.Logger().Info("Starting module migrations...")
 
 		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
 	})
@@ -993,7 +1028,9 @@ func (app *OraichainApp) upgradeHandler() {
 
 	if upgradeInfo.Name == BinaryVersion && !app.upgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{icacontrollertypes.SubModuleName, icahosttypes.SubModuleName, ibcfeetypes.ModuleName, intertxtypes.ModuleName},
+			Added: []string{
+				providertypes.ModuleName,
+			},
 		}
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
