@@ -11,15 +11,15 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// TestBasicJunoStart is a basic test to assert that spinning up a Juno network with one validator works properly.
-func TestBasicJunoStart(t *testing.T) {
+// TestBasicChainStart is a basic test to assert that spinning up a network with one validator works properly.
+func TestBasicChainStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 
 	t.Parallel()
 
-	// Create chain factory with Juno
+	// Create chain factory
 	numVals := 1
 	numFullNodes := 1
 
@@ -37,10 +37,10 @@ func TestBasicJunoStart(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	juno := chains[0].(*cosmos.CosmosChain)
+	chain := chains[0].(*cosmos.CosmosChain)
 
 	// Create a new Interchain object which describes the chains, relayers, and IBC connections we want to use
-	ic := interchaintest.NewInterchain().AddChain(juno)
+	ic := interchaintest.NewInterchain().AddChain(chain)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)

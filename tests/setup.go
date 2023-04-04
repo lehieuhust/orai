@@ -33,11 +33,9 @@ var (
 		EncodingConfig:      chainEncoding(),
 	}
 
-	// pathJunoGaia        = "juno-gaia"
 	genesisWalletAmount = int64(10_000_000)
 )
 
-// chainEncoding registers the Juno specific module codecs so that the associated types and msgs
 func chainEncoding() *simappparams.EncodingConfig {
 	cfg := cosmos.DefaultEncoding()
 	return &cfg
