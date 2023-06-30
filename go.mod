@@ -160,7 +160,7 @@ replace (
 
 	// use informal system fork of tendermint
 	// (https://github.com/informalsystems/tendermint/releases/tag/v0.34.25).
-	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.29
+	github.com/tendermint/tendermint => github.com/oraichain/cometbft v0.34.30-0.20230630074157-6f5c8d6b281f
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
 // Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
